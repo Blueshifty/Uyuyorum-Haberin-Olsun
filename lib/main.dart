@@ -8,12 +8,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 
 // For Sqflite
-
 import 'package:uyuyorum_haberin_olsun/model/message.dart';
 import 'package:uyuyorum_haberin_olsun/util/database_helper.dart';
 
 // For Contacts
-
 import 'package:contacts_service/contacts_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 
