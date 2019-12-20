@@ -54,12 +54,12 @@ class BluetoothApp extends StatefulWidget {
 }
 
 class _BluetoothAppState extends State<BluetoothApp> {
-  // Initializing a global key, as it would help us in showing a SnackBar later
+
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
-  // Get the instance of the bluetooth
+
   FlutterBluetoothSerial bluetooth = FlutterBluetoothSerial.instance;
 
-  // Define some variables, which will be required later
+
   List<BluetoothDevice> _devicesList = [];
   BluetoothDevice _device;
   bool _connected = false;
@@ -71,18 +71,17 @@ class _BluetoothAppState extends State<BluetoothApp> {
     bluetoothConnectionState();
   }
 
-  // We are using async callback for using await
+
   Future<void> bluetoothConnectionState() async {
     List<BluetoothDevice> devices = [];
 
-    // To get the list of paired devices
     try {
       devices = await bluetooth.getBondedDevices();
     } on PlatformException {
       print("Hata");
     }
 
-    // For knowing when bluetooth is connected and when disconnected
+   
 
     bluetooth.onStateChanged().listen((state) {
       if (state.underlyingValue == 10) {
@@ -99,19 +98,16 @@ class _BluetoothAppState extends State<BluetoothApp> {
       }
     });
 
-    // It is an error to call [setState] unless [mounted] is true.
+  
     if (!mounted) {
       return;
     }
 
-    // Store the [devices] list in the [_devicesList] for accessing
-    // the list outside this class
     setState(() {
       _devicesList = devices;
     });
   }
 
-  // Now, its time to build the UI
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -176,7 +172,7 @@ class _BluetoothAppState extends State<BluetoothApp> {
     );
   }
 
-  // Create the List of devices to be shown in Dropdown Menu
+
   List<DropdownMenuItem<BluetoothDevice>> _getDeviceItems() {
     List<DropdownMenuItem<BluetoothDevice>> items = [];
     if (_devicesList.isEmpty) {
@@ -194,7 +190,6 @@ class _BluetoothAppState extends State<BluetoothApp> {
     return items;
   }
 
-  // Method to connect to bluetooth
   void _connect() {
     if (_device == null) {
       show('No device selected');
@@ -213,14 +208,12 @@ class _BluetoothAppState extends State<BluetoothApp> {
     }
   }
 
-  // Method to disconnect bluetooth
+
   void _disconnect() {
     bluetooth.disconnect();
     setState(() => _pressed = true);
   }
 
-  // Method to send message,
-  // for turning the bletooth device on
   void _sendOnMessageToBluetooth() {
     bluetooth.isConnected.then((isConnected) {
       if (isConnected) {
@@ -230,8 +223,6 @@ class _BluetoothAppState extends State<BluetoothApp> {
     });
   }
 
-  // Method to send message,
-  // for turning the bletooth device off
   void _sendOffMessageToBluetooth() {
     bluetooth.isConnected.then((isConnected) {
       if (isConnected) {
@@ -241,8 +232,7 @@ class _BluetoothAppState extends State<BluetoothApp> {
     });
   }
 
-  // Method to show a Snackbar,
-  // taking message as the text
+
   Future show(
     String message, {
     Duration duration: const Duration(seconds: 3),
