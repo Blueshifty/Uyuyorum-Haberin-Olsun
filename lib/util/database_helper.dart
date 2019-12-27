@@ -13,6 +13,7 @@ class DatabaseHelper {
   final String columnId = 'id';
   final String columnContactName = 'contactName';
   final String columnMessage = 'message';
+  final String columnPhoneNumber = 'phoneNumber';
  
   static Database _db;
  
@@ -39,7 +40,7 @@ class DatabaseHelper {
  
   void _onCreate(Database db, int newVersion) async {
     await db.execute(
-        'CREATE TABLE $tableMessage($columnId INTEGER PRIMARY KEY, $columnContactName TEXT, $columnMessage TEXT)');
+        'CREATE TABLE $tableMessage($columnId INTEGER PRIMARY KEY, $columnContactName TEXT, $columnMessage TEXT, $columnPhoneNumber TEXT)');
   }
  
   Future<int> saveMessage(Message message) async {
@@ -53,7 +54,7 @@ class DatabaseHelper {
  
   Future<List> getAllMessages() async {
     var dbClient = await db;
-    var result = await dbClient.query(tableMessage, columns: [columnId, columnContactName, columnMessage]);
+    var result = await dbClient.query(tableMessage, columns: [columnId, columnContactName, columnMessage, columnPhoneNumber]);
 //    var result = await dbClient.rawQuery('SELECT * FROM $tableNote');
  
     return result.toList();
@@ -67,7 +68,7 @@ class DatabaseHelper {
   Future<Message> getMessage(int id) async {
     var dbClient = await db;
     List<Map> result = await dbClient.query(tableMessage,
-        columns: [columnId, columnContactName, columnMessage],
+        columns: [columnId, columnContactName, columnMessage, columnPhoneNumber],
         where: '$columnId = ?',
         whereArgs: [id]);
 //    var result = await dbClient.rawQuery('SELECT * FROM $tableMessage WHERE $columnId = $id');
@@ -78,7 +79,20 @@ class DatabaseHelper {
  
     return null;
   }
- 
+
+  Future<Message> getMessageByName(String name) async {
+    var dbClient = await db;
+    List<Map> result = await dbClient.query(tableMessage,
+        columns: [columnId, columnContactName, columnMessage, columnPhoneNumber],
+        where: '$columnPhoneNumber = ?',
+        whereArgs: [name]);
+    if (result.length > 0) {
+      return new Message.fromMap(result.first);
+    }
+    return null;
+  }
+
+
   Future<int> deleteMessage(int id) async {
     var dbClient = await db;
     return await dbClient.delete(tableMessage, where: '$columnId = ?', whereArgs: [id]);

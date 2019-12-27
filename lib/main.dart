@@ -15,6 +15,12 @@ import 'package:uyuyorum_haberin_olsun/util/database_helper.dart';
 import 'package:contacts_service/contacts_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+// For Call Logs
+import 'package:call_log/call_log.dart';
+
+// For SMS
+import 'package:flutter_sms/flutter_sms.dart';
+
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
@@ -22,14 +28,16 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
         home: DefaultTabController(
-      length: 3,
+      length: 5,
       child: Scaffold(
           appBar: AppBar(
             bottom: TabBar(
               tabs: [
                 Tab(icon: Icon(Icons.message)),
                 Tab(icon: Icon(Icons.bluetooth_searching)),
-                Tab(icon: Icon(Icons.portrait))
+                Tab(icon: Icon(Icons.portrait)),
+                Tab(icon: Icon(Icons.call)),
+                Tab(icon: Icon(Icons.favorite)),
               ],
             ),
             centerTitle: true,
@@ -40,6 +48,8 @@ class MyApp extends StatelessWidget {
               MessagePage(),
               BluetoothApp(),
               AccessContacts(),
+              AccessCallLog(),
+              MessageFormApp(),
             ],
           )),
     ));
@@ -52,11 +62,9 @@ class BluetoothApp extends StatefulWidget {
 }
 
 class _BluetoothAppState extends State<BluetoothApp> {
-
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
 
   FlutterBluetoothSerial bluetooth = FlutterBluetoothSerial.instance;
-
 
   List<BluetoothDevice> _devicesList = [];
   BluetoothDevice _device;
@@ -69,7 +77,6 @@ class _BluetoothAppState extends State<BluetoothApp> {
     bluetoothConnectionState();
   }
 
-
   Future<void> bluetoothConnectionState() async {
     List<BluetoothDevice> devices = [];
 
@@ -78,8 +85,6 @@ class _BluetoothAppState extends State<BluetoothApp> {
     } on PlatformException {
       print("Hata");
     }
-
-   
 
     bluetooth.onStateChanged().listen((state) {
       if (state.underlyingValue == 10) {
@@ -96,7 +101,6 @@ class _BluetoothAppState extends State<BluetoothApp> {
       }
     });
 
-  
     if (!mounted) {
       return;
     }
@@ -170,7 +174,6 @@ class _BluetoothAppState extends State<BluetoothApp> {
     );
   }
 
-
   List<DropdownMenuItem<BluetoothDevice>> _getDeviceItems() {
     List<DropdownMenuItem<BluetoothDevice>> items = [];
     if (_devicesList.isEmpty) {
@@ -206,7 +209,6 @@ class _BluetoothAppState extends State<BluetoothApp> {
     }
   }
 
-
   void _disconnect() {
     bluetooth.disconnect();
     setState(() => _pressed = true);
@@ -229,7 +231,6 @@ class _BluetoothAppState extends State<BluetoothApp> {
       }
     });
   }
-
 
   Future show(
     String message, {
@@ -269,7 +270,7 @@ class MessagePage extends StatelessWidget {
                   style: TextStyle(fontSize: 20),
                 ),
                 onPressed: () {
-                  _createDatabase(db);
+                 // _createDatabase(db);
                 }),
             RaisedButton(
               child: Text(
@@ -312,7 +313,7 @@ class MessagePage extends StatelessWidget {
       ),
     );
   }
-
+/*
   void _createDatabase(DatabaseHelper db) async {
     List messages;
     await db.saveMessage(new Message("Mehmet Bir", "Uyuyorum Kardeşim"));
@@ -321,7 +322,7 @@ class MessagePage extends StatelessWidget {
     print("DATABASE OLUSTURULDU");
     messages = await db.getAllMessages();
     messages.forEach((message) => print(message));
-  }
+  }*/
 
   void _getAllMessages(DatabaseHelper db) async {
     List messages;
@@ -420,6 +421,236 @@ class _AccessContactsState extends State<AccessContacts> {
               },
             )
           : CircularProgressIndicator(),
+    );
+  }
+}
+
+class AccessCallLog extends StatefulWidget {
+  @override
+  _AccessCallLogState createState() => _AccessCallLogState();
+}
+
+class _AccessCallLogState extends State<AccessCallLog> {
+  Iterable<CallLogEntry> _callLog;
+
+  @override
+  void initState() {
+    super.initState();
+    getCallLog();
+  }
+
+  getCallLog() async {
+    PermissionStatus permissionStatus = await _getPermission();
+    if (permissionStatus == PermissionStatus.granted) {
+      var now = DateTime.now();
+      int from = now.subtract(Duration(days: 10)).millisecondsSinceEpoch;
+      int to = now.millisecondsSinceEpoch;
+
+      var callLog = await CallLog.query(
+        dateFrom: from,
+        dateTo: to,
+        durationFrom: 0,
+        durationTo: 300,
+      );
+
+      setState(() {
+        _callLog = callLog;
+      });
+    } else {
+      throw PlatformException(
+        code: 'PERMISSON_DENIED',
+        message: 'Accsess to Calllog Denied',
+        details: null,
+      );
+    }
+  }
+
+  Future<PermissionStatus> _getPermission() async {
+    PermissionStatus permission =
+        await PermissionHandler().checkPermissionStatus(PermissionGroup.phone);
+
+    if (permission != PermissionStatus.granted &&
+        permission != PermissionStatus.disabled) {
+      print('Dont Have Permission To Read Call Log');
+      Map<PermissionGroup, PermissionStatus> permissionStatus =
+          await PermissionHandler().requestPermissions([PermissionGroup.phone]);
+      return permissionStatus[PermissionGroup.contacts] ??
+          PermissionStatus.unknown;
+    } else {
+      return permission;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Arama Kayıtları'),
+        centerTitle: true,
+      ),
+      body: _callLog != null
+          ? ListView.builder(
+              itemCount: _callLog?.length ?? 0,
+              itemBuilder: (context, index) {
+                CallLogEntry c = _callLog?.elementAt(index);
+                return Card(
+                  child: ListTile(
+                      title: Text(c.name ?? ''),
+                      subtitle: Text(c.number ?? '')),
+                );
+              },
+            )
+          : CircularProgressIndicator(),
+    );
+  }
+}
+
+class MessageFormApp extends StatefulWidget {
+  @override
+  State<StatefulWidget> createState() => new _MessageFormAppState();
+}
+
+class _MessageData {
+  String name = '';
+  String phoneNumber = '';
+  String message = '';
+}
+
+class _MessageFormAppState extends State<MessageFormApp> {
+  Iterable<Contact> _contacts;
+
+  final db = DatabaseHelper();
+
+  Contact _contact;
+
+  String message = '';  
+
+  _MessageData newMessage = new _MessageData();
+
+  @override
+  void initState() {
+    super.initState();
+    getContacts();
+  }
+
+  getContacts() async {
+    PermissionStatus permissionStatus = await _getPermission();
+    if (permissionStatus == PermissionStatus.granted) {
+      var contacts = await ContactsService.getContacts();
+      setState(() {
+        _contacts = contacts;
+      });
+    } else {
+      throw PlatformException(
+        code: 'PERMISSION_DENIED',
+        message: 'Access to location data denied',
+        details: null,
+      );
+    }
+  }
+
+  Future<PermissionStatus> _getPermission() async {
+    PermissionStatus permission = await PermissionHandler()
+        .checkPermissionStatus(PermissionGroup.contacts);
+    if (permission != PermissionStatus.granted &&
+        permission != PermissionStatus.disabled) {
+      print("i dont have permission");
+      Map<PermissionGroup, PermissionStatus> permisionStatus =
+          await PermissionHandler()
+              .requestPermissions([PermissionGroup.contacts]);
+      return permisionStatus[PermissionGroup.contacts] ??
+          PermissionStatus.unknown;
+    } else {
+      return permission;
+    }
+  }
+
+  List<DropdownMenuItem<Contact>> _getContactItems(){
+    List<DropdownMenuItem<Contact>> items = [];
+    if (_contacts == null) {
+      items.add(DropdownMenuItem(
+        child: Text('Rehber Yükleniyor ...'),
+      ));
+    } else {
+      _contacts.forEach((contact) {
+        items.add(DropdownMenuItem(
+          child: Text(contact.displayName),
+          value: contact,
+        ));
+      });
+    }
+    return items;
+  }
+
+  void _submitForm() async{
+    
+    _formKey.currentState.save();
+    
+    await db.saveMessage(new Message(this._contact.displayName, this.message, this._contact.phones.first.value.toString(),));
+  
+    _getAllMessages();
+
+  }
+
+  void _getAllMessages() async {
+    List messages;
+    messages = await db.getAllMessages();
+    messages.forEach((message) => print(message));
+  }
+
+
+  final GlobalKey<FormState> _formKey = new GlobalKey<FormState>();
+
+  @override
+  Widget build(BuildContext context) {
+    return new Scaffold(
+      appBar: new AppBar(
+        title: new Text('Kişiye Özgü Mesaj Girin'),
+      ),
+      body: new Container(
+          padding: new EdgeInsets.all(20.0),
+          child: new Form(
+            key: this._formKey,
+            child: new ListView(
+              children: <Widget>[
+                new TextFormField(
+                  decoration: InputDecoration(
+                    labelText: 'Mesaj',
+                    hintText: 'Kişiye Özgü Mesajınızı Girin',
+                    icon: const Icon(Icons.email),
+                  ),
+                  onSaved: (String value) {
+                    this.message = value;
+                  },
+                ),
+                new FormField(builder: (FormFieldState<String> state) {
+                  return InputDecorator(
+                    decoration: InputDecoration(
+                      icon: const Icon(Icons.person),
+                      labelText: 'Kişi',
+                    ),
+                    child: new DropdownButtonHideUnderline(
+                        child: new DropdownButton<Contact>(
+                      value: _contact,
+                      isDense: true,
+                      onChanged: (value) => setState(() => _contact = value), 
+                      items: _getContactItems(),
+                    )),
+                  );
+                },
+                validator: (value) {
+                  return value != '' ? null : 'Lütfen Bir Kişi Seçin';
+                },
+                ),
+                        new Container(
+            padding: const EdgeInsets.only(left: 40.0, right: 40.0, top: 20.0),
+            child: new RaisedButton(
+              child: const Text('Mesajı Kaydet'),
+              onPressed: _submitForm,
+            )),
+              ],
+            ),
+          )),
     );
   }
 }
